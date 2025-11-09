@@ -52,6 +52,7 @@ class RAGPipeline:
         """Add document chunks to vector database"""
         # Calculate chunk IDs
         chunks_with_ids = self._calculate_chunk_ids(chunks)
+        logger.info(f"Calculated IDs for {len(chunks_with_ids)} chunks")
         
         # Get existing documents
         existing_count = self.vector_store.get_document_count()
@@ -60,19 +61,33 @@ class RAGPipeline:
         # Add new documents
         existing_items = self.vector_store.db.get(include=[])
         existing_ids = set(existing_items.get("ids", []))
+        logger.info(f"Found {len(existing_ids)} existing IDs in database")
         
         new_chunks = [
             chunk for chunk in chunks_with_ids
             if chunk.metadata.get("id") not in existing_ids
         ]
         
+        logger.info(f"Found {len(new_chunks)} new chunks to add")
+        
         if new_chunks:
             new_chunk_ids = [chunk.metadata["id"] for chunk in new_chunks]
+            logger.info(f"Adding {len(new_chunks)} chunks with IDs: {new_chunk_ids[:3]}...")
+            
             self.vector_store.add_documents(new_chunks, ids=new_chunk_ids)
-            logger.info(f"Added {len(new_chunks)} new documents to database")
+            
+            # Verify they were added
+            final_count = self.vector_store.get_document_count()
+            logger.info(f"Added {len(new_chunks)} new documents. Final count: {final_count}")
+            
+            if final_count > existing_count:
+                logger.info(f"✓ Success! Database grew from {existing_count} to {final_count}")
+            else:
+                logger.warning(f"⚠ Warning: Added {len(new_chunks)} chunks but count didn't change ({existing_count} -> {final_count})")
+            
             return len(new_chunks)
         else:
-            logger.info("No new documents to add")
+            logger.info("No new documents to add (all already in database)")
             return 0
     
     def _calculate_chunk_ids(self, chunks: List[Document]) -> List[Document]:

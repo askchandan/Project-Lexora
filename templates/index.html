@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Lexora - RAG Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h1>📚 Lexora</h1>
+                <p>RAG + LLM Chatbot</p>
+            </div>
+            
+            <div class="status-box">
+                <h3>Status</h3>
+                <p id="doc-count">Documents: <span>0</span></p>
+                <p id="model-name">Model: Loading...</p>
+            </div>
+            
+            <div class="upload-section">
+                <h3>Upload PDF</h3>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <input type="file" id="pdfFile" accept=".pdf" required>
+                    <button type="submit" class="btn btn-primary">
+                        📤 Upload
+                    </button>
+                </form>
+                <div id="uploadStatus" class="status-message"></div>
+            </div>
+            
+            <div class="actions">
+                <button id="clearBtn" class="btn btn-danger">🗑️ Clear DB</button>
+            </div>
+            
+            <div class="info">
+                <p><strong>Tips:</strong></p>
+                <ul>
+                    <li>Upload PDF documents</li>
+                    <li>Ask questions about content</li>
+                    <li>Get instant answers</li>
+                    <li>See sources used</li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-area">
+            <div class="header">
+                <h2>Chat Interface</h2>
+                <p>Ask questions about your documents</p>
+            </div>
+            
+            <div id="chatMessages" class="messages">
+                <div class="message assistant">
+                    <div class="message-content">
+                        <p>👋 Welcome to Project Lexora!</p>
+                        <p>Upload PDF documents and ask questions about them.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="input-area">
+                <form id="queryForm">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="queryInput" 
+                            placeholder="Ask a question..." 
+                            autocomplete="off"
+                        >
+                        <button type="submit" class="btn btn-send">
+                            ➤ Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

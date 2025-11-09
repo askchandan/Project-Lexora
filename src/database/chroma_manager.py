@@ -40,7 +40,18 @@ class ChromaManager(VectorStore):
             ids: Unique IDs for each document
         """
         self.db.add_documents(documents, ids=ids)
-        logger.info(f"Added {len(documents)} documents to Chroma")
+        
+        # Ensure documents are persisted
+        try:
+            if hasattr(self.db, 'persist'):
+                self.db.persist()
+                logger.info(f"Persisted {len(documents)} documents to Chroma")
+        except Exception as e:
+            logger.warning(f"Could not explicitly persist: {e}")
+        
+        # Verify they were added
+        count = self.get_document_count()
+        logger.info(f"Added {len(documents)} documents to Chroma (total now: {count})")
     
     def similarity_search(self, query: str, k: int = 5) -> List[Tuple[Any, float]]:
         """
