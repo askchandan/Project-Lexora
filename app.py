@@ -268,7 +268,7 @@ def clear_database():
         try:
             if os.path.exists(config['chroma_path']):
                 shutil.rmtree(config['chroma_path'], ignore_errors=True)
-                logger.info("Attempted to clear database folder")
+                logger.info("Cleared database folder")
         except Exception as e:
             logger.warning(f"Could not clear database folder: {e}")
         
@@ -279,7 +279,7 @@ def clear_database():
         
         return jsonify({
             'success': True,
-            'message': 'Database cleared. Please refresh the page to see changes.'
+            'message': 'Database cleared! Please restart Flask (Ctrl+C then python app.py) for changes to take effect.'
         }), 200
         
     except Exception as e:
