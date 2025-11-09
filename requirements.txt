@@ -1,6 +1,7 @@
-langchain
-chromadb
 pypdf
-pytest
+langchain
+langchain-chroma
+langchain-community
+langchain-core
+langchain-openai
 python-dotenv
-langchain_community
