@@ -7,9 +7,28 @@ Loads PDFs from data directory and populates the Chroma vector database
 import argparse
 import sys
 import os
+import shutil
+import time
 
 # Add parent directory to path to allow imports from src
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Delete chroma_db BEFORE importing anything that uses it
+def delete_chroma_db(chroma_path: str):
+    """Force delete chroma database directory"""
+    if os.path.exists(chroma_path):
+        try:
+            shutil.rmtree(chroma_path)
+            print(f"✓ Deleted {chroma_path}")
+        except Exception as e:
+            print(f"⚠ Warning: Could not delete {chroma_path}: {e}")
+            # Try again after a delay
+            time.sleep(1)
+            try:
+                shutil.rmtree(chroma_path)
+                print(f"✓ Deleted {chroma_path} on retry")
+            except Exception as e2:
+                print(f"✗ Failed to delete: {e2}")
 
 from src.core.rag_pipeline import RAGPipeline
 from src.utils import load_config, get_logger
@@ -25,23 +44,26 @@ def main():
     parser.add_argument(
         "--reset",
         action="store_true",
-        help="Reset the database before populating"
+        help="Reset the database before populating (deletes all existing documents)"
     )
     
     args = parser.parse_args()
     config = load_config()
     
+    # Only delete database if explicitly requested with --reset
+    if args.reset:
+        print("🔄 Resetting database (deleting all existing documents)...")
+        delete_chroma_db(config['chroma_path'])
+        print("✓ Database reset complete\n")
+    else:
+        print("📝 Adding new documents (existing documents preserved)...\n")
+    
     try:
-        # Initialize RAG pipeline
+        # Initialize RAG pipeline (after deletion if needed)
         pipeline = RAGPipeline(
             data_path=config['data_path'],
             chroma_path=config['chroma_path']
         )
-        
-        # Reset if requested
-        if args.reset:
-            logger.info("Resetting database...")
-            pipeline.clear_database()
         
         # Load documents
         documents = pipeline.load_documents()
@@ -49,13 +71,19 @@ def main():
         # Split documents
         chunks = pipeline.split_documents(documents)
         
-        # Add to database
+        # Add to database (without deleting existing ones)
         added_count = pipeline.add_chunks_to_database(chunks)
         
-        logger.info(f"Successfully populated database with {added_count} new documents")
+        if added_count > 0:
+            logger.info(f"Successfully added {added_count} new documents")
+            print(f"✓ Successfully added {added_count} new documents")
+        else:
+            logger.info("No new documents to add (all already in database)")
+            print(f"ℹ No new documents to add (all already in database)")
         
     except Exception as e:
         logger.error(f"Error populating database: {str(e)}")
+        print(f"✗ Error: {str(e)}")
         sys.exit(1)
 
 
