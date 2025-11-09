@@ -1,0 +1,109 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "project-lexora"
+version = "1.0.0"
+description = "RAG + LLM Chatbot for IT Act and Cyber Crime Law"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Chandan Malakar", email = "your-email@example.com"},
+]
+keywords = ["RAG", "LLM", "chatbot", "law", "cyber-crime"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "pypdf>=3.0.0",
+    "langchain>=1.0.0",
+    "langchain-chroma>=0.1.0",
+    "langchain-community>=0.0.0",
+    "langchain-core>=0.1.0",
+    "langchain-openai>=0.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=5.0.0",
+    "mypy>=1.0.0",
+    "isort>=5.0.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "myst-parser>=0.18.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/askchandan/Project-Lexora"
+Documentation = "https://github.com/askchandan/Project-Lexora/tree/main/docs"
+Repository = "https://github.com/askchandan/Project-Lexora.git"
+Issues = "https://github.com/askchandan/Project-Lexora/issues"
+
+[project.scripts]
+lexora-populate = "scripts.populate_database:main"
+lexora-query = "scripts.query:main"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.setuptools.package-data]
+src = ["**/*.py"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --strict-markers --tb=short"
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks tests as integration tests",
+]
