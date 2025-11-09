@@ -115,43 +115,97 @@ uploadForm.addEventListener('submit', async (e) => {
     // Show uploading status
     showUploadStatus('📤 Uploading "' + file.name + '"...', 'info');
     
+    // Show progress bar
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Uploading: 0%';
+    
     try {
-        const response = await fetch('/upload', {
-            method: 'POST',
-            body: formData
+        // Use XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
+        
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                progressBar.style.width = percentComplete + '%';
+                progressText.textContent = `Uploading: ${Math.round(percentComplete)}%`;
+                console.log('Upload progress:', Math.round(percentComplete) + '%');
+            }
         });
         
-        console.log('Upload response status:', response.status);
-        const data = await response.json();
-        console.log('Upload response data:', data);
+        // Handle completion
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                const data = JSON.parse(xhr.responseText);
+                console.log('Upload response data:', data);
+                
+                if (data.success) {
+                    progressBar.style.width = '100%';
+                    progressText.textContent = 'Uploading: 100%';
+                    
+                    const message = `✓ PDF "${data.filename}" uploaded! Added ${data.chunks} chunks.`;
+                    
+                    // Hide progress after 1 second
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        showUploadStatus(message, 'success');
+                    }, 500);
+                    
+                    pdfFile.value = '';
+                    
+                    // Add message to chat
+                    addMessage(`📄 ${message}`, 'assistant');
+                    
+                    console.log('Updating status after upload...');
+                    
+                    // Wait a bit then update status
+                    setTimeout(() => {
+                        console.log('Calling updateStatus() after upload');
+                        updateStatus();
+                    }, 1000);
+                    
+                    // Try updating again after another delay to be sure
+                    setTimeout(() => {
+                        console.log('Calling updateStatus() again after upload (retry)');
+                        updateStatus();
+                    }, 2000);
+                } else {
+                    progressContainer.style.display = 'none';
+                    showUploadStatus('✗ Upload failed: ' + data.message, 'error');
+                    addMessage('❌ Upload error: ' + data.message, 'assistant');
+                }
+            } else {
+                progressContainer.style.display = 'none';
+                showUploadStatus('✗ Upload failed: HTTP ' + xhr.status, 'error');
+                addMessage('❌ Upload error: HTTP ' + xhr.status, 'assistant');
+            }
+        });
         
-        if (data.success) {
-            const message = `✓ PDF "${data.filename}" uploaded! Added ${data.chunks} chunks.`;
-            showUploadStatus(message, 'success');
-            pdfFile.value = '';
-            
-            // Add message to chat
-            addMessage(`📄 ${message}`, 'assistant');
-            
-            console.log('Updating status after upload...');
-            
-            // Wait a bit then update status
-            setTimeout(() => {
-                console.log('Calling updateStatus() after upload');
-                updateStatus();
-            }, 500);
-            
-            // Try updating again after another delay to be sure
-            setTimeout(() => {
-                console.log('Calling updateStatus() again after upload (retry)');
-                updateStatus();
-            }, 1500);
-        } else {
-            showUploadStatus('✗ Upload failed: ' + data.message, 'error');
-            addMessage('❌ Upload error: ' + data.message, 'assistant');
-        }
+        // Handle errors
+        xhr.addEventListener('error', () => {
+            progressContainer.style.display = 'none';
+            console.error('Upload error');
+            showUploadStatus('✗ Upload failed: Network error', 'error');
+            addMessage('❌ Upload error: Network error', 'assistant');
+        });
+        
+        // Handle abort
+        xhr.addEventListener('abort', () => {
+            progressContainer.style.display = 'none';
+            console.error('Upload aborted');
+            showUploadStatus('✗ Upload cancelled', 'error');
+        });
+        
+        // Send request
+        xhr.open('POST', '/upload');
+        xhr.send(formData);
         
     } catch (error) {
+        progressContainer.style.display = 'none';
         console.error('Upload error:', error);
         showUploadStatus('✗ Upload failed: ' + error.message, 'error');
         addMessage('❌ Upload error: ' + error.message, 'assistant');
