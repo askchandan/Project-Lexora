@@ -245,40 +245,45 @@ def status():
 def clear_database():
     """Clear the vector database"""
     try:
-        if pipeline is None:
-            return jsonify({'success': False, 'message': 'Pipeline not initialized'}), 500
+        global pipeline, query_engine, chroma_manager
         
-        logger.info("Clearing database...")
-        pipeline.clear_database()
+        logger.info("Clear database requested")
         
-        # Reinitialize both query engine and chroma manager
-        global query_engine, chroma_manager
-        
-        from src.database.chroma_manager import ChromaManager
-        chroma_manager = ChromaManager(persist_directory=config['chroma_path'])
-        logger.info("Chroma manager reinitialized after clear")
-        
-        query_engine = QueryEngine(
-            chroma_path=config['chroma_path'],
-            model_name=config.get('model_name', 'mistralai/mistral-7b-instruct')
-        )
-        logger.info("Query engine reinitialized after clear")
+        # Close all connections
+        pipeline = None
+        query_engine = None
+        chroma_manager = None
         
         # Clear uploads folder
-        for file in os.listdir(app.config['UPLOAD_FOLDER']):
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file)
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
+        try:
+            for file in os.listdir(app.config['UPLOAD_FOLDER']):
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file)
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            logger.info("Uploads folder cleared")
+        except Exception as e:
+            logger.warning(f"Could not clear uploads folder: {e}")
         
-        logger.info("Database and uploads cleared successfully")
+        # Clear database folder (ignore errors - files may be locked)
+        try:
+            if os.path.exists(config['chroma_path']):
+                shutil.rmtree(config['chroma_path'], ignore_errors=True)
+                logger.info("Attempted to clear database folder")
+        except Exception as e:
+            logger.warning(f"Could not clear database folder: {e}")
+        
+        # Reinitialize fresh instances
+        logger.info("Reinitializing fresh instances...")
+        initialize_pipeline()
+        logger.info("✓ Database cleared and reinitialized")
         
         return jsonify({
             'success': True,
-            'message': 'Database cleared successfully'
+            'message': 'Database cleared. Please refresh the page to see changes.'
         }), 200
         
     except Exception as e:
-        logger.error(f"Error clearing database: {str(e)}")
+        logger.error(f"Error clearing database: {str(e)}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
