@@ -59,33 +59,52 @@ class ChromaManager(VectorStore):
     
     def delete_all(self) -> None:
         """Delete all documents and reset the database"""
+        import time
+        import gc
+        
         try:
-            # Close the current database connection
+            # Force garbage collection
+            gc.collect()
+            
+            # Close the current database connection thoroughly
             if hasattr(self.db, '_client'):
                 self.db._client = None
+            if hasattr(self.db, 'db'):
+                self.db.db = None
+            self.db = None
             
-            # Wait a moment for file handles to release
-            import time
-            time.sleep(0.5)
+            # Wait for file handles to release
+            time.sleep(1)
         except Exception as e:
             logger.warning(f"Could not close connection: {e}")
         
-        # Delete the directory
-        if os.path.exists(self.persist_directory):
+        # Delete the directory with retries
+        retry_count = 0
+        max_retries = 3
+        
+        while retry_count < max_retries and os.path.exists(self.persist_directory):
             try:
                 shutil.rmtree(self.persist_directory)
                 logger.info(f"Deleted Chroma database at {self.persist_directory}")
+                break
             except Exception as e:
-                logger.warning(f"Could not delete directory: {e}")
-                # Try force remove on Windows
-                import subprocess
-                try:
-                    subprocess.run(['rmdir', '/s', '/q', self.persist_directory], 
-                                 shell=True, check=False)
-                except:
-                    pass
+                retry_count += 1
+                logger.warning(f"Attempt {retry_count} to delete failed: {e}")
+                time.sleep(0.5)
+                
+                if retry_count >= max_retries:
+                    # Last resort: try Windows rmdir command
+                    import subprocess
+                    try:
+                        subprocess.run(['rmdir', '/s', '/q', self.persist_directory], 
+                                     shell=True, check=False, timeout=5)
+                        logger.info("Deleted via Windows rmdir command")
+                    except Exception as e2:
+                        logger.error(f"Could not delete directory: {e2}")
+                        raise
         
         # Recreate fresh database
+        gc.collect()
         self.db = Chroma(
             persist_directory=self.persist_directory,
             embedding_function=self.embedding_function
