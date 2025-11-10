@@ -71,14 +71,18 @@ function updateStatus() {
 
 // Handle file upload
 function handleUpload() {
+    console.log('handleUpload called');
     const file = fileInput.files[0];
+    console.log('Selected file:', file);
     
     if (!file) {
+        console.log('No file selected');
         showMessage('Please select a PDF file', 'error');
         return;
     }
     
     if (isUploading) {
+        console.log('Already uploading');
         return;
     }
     
@@ -96,50 +100,47 @@ function handleUpload() {
         uploadSection.appendChild(progressBar);
     }
     progressBar.style.display = 'block';
+    progressBar.querySelector('.progress-bar').style.width = '0%';
     
     const formData = new FormData();
     formData.append('file', file);
     
-    const xhr = new XMLHttpRequest();
+    console.log('Starting file upload via fetch...');
     
-    // Track upload progress
-    xhr.upload.addEventListener('progress', function(e) {
-        if (e.lengthComputable) {
-            const percentComplete = (e.loaded / e.total) * 100;
-            progressBar.querySelector('.progress-bar').style.width = percentComplete + '%';
+    fetch('/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Upload response status:', response.status);
+        if (!response.ok) {
+            throw new Error('Upload failed: HTTP ' + response.status);
         }
-    });
-    
-    xhr.addEventListener('load', function() {
+        return response.json();
+    })
+    .then(data => {
+        console.log('Upload response JSON:', data);
         progressBar.style.display = 'none';
         isUploading = false;
         uploadBtn.disabled = false;
         uploadBtn.textContent = 'Upload PDF';
         
-        if (xhr.status === 200) {
-            const response = JSON.parse(xhr.responseText);
-            if (response.success) {
-                showMessage('PDF uploaded successfully! Processed ' + response.chunks + ' chunks.', 'success');
-                fileInput.value = '';
-                updateStatus();
-            } else {
-                showMessage('Error: ' + response.message, 'error');
-            }
+        if (data.success) {
+            showMessage('PDF uploaded successfully! Processed ' + (data.chunks || 0) + ' chunks.', 'success');
+            fileInput.value = '';
+            updateStatus();
         } else {
-            showMessage('Upload failed with status ' + xhr.status, 'error');
+            showMessage('Error: ' + (data.message || 'Unknown error'), 'error');
         }
-    });
-    
-    xhr.addEventListener('error', function() {
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
         progressBar.style.display = 'none';
         isUploading = false;
         uploadBtn.disabled = false;
         uploadBtn.textContent = 'Upload PDF';
-        showMessage('Upload error', 'error');
+        showMessage('Upload error: ' + error.message, 'error');
     });
-    
-    xhr.open('POST', '/upload');
-    xhr.send(formData);
 }
 
 // Handle query submission
