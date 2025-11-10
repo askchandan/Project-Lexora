@@ -1,317 +1,272 @@
-// Project Lexora - Flask GUI JavaScript
-
 // DOM Elements
-const chatMessages = document.getElementById('chatMessages');
-const queryForm = document.getElementById('queryForm');
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
 const queryInput = document.getElementById('queryInput');
-const uploadForm = document.getElementById('uploadForm');
-const pdfFile = document.getElementById('pdfFile');
-const uploadStatus = document.getElementById('uploadStatus');
+const sendBtn = document.getElementById('sendBtn');
+const chatBox = document.getElementById('chatBox');
+const docCount = document.getElementById('docCount');
+const modelName = document.getElementById('modelName');
 const clearBtn = document.getElementById('clearBtn');
 
+// State
+let isUploading = false;
+
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
     updateStatus();
-    setInterval(updateStatus, 5000); // Update status every 5 seconds
+    setupEventListeners();
 });
 
-// Query Form Submission
-queryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Setup event listeners
+function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    console.log('uploadBtn:', uploadBtn);
+    console.log('sendBtn:', sendBtn);
+    console.log('clearBtn:', clearBtn);
+    console.log('queryInput:', queryInput);
     
-    const query = queryInput.value.trim();
-    if (!query) return;
-    
-    // Add user message to chat
-    addMessage(query, 'user');
-    queryInput.value = '';
-    
-    // Show loading indicator
-    const loadingMsg = addMessage('🔄 Processing...', 'assistant');
-    
-    try {
-        console.log('Sending query:', query);
-        
-        // Send query to backend
-        const response = await fetch('/query', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ query: query })
-        });
-        
-        console.log('Response status:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    uploadBtn.addEventListener('click', function(e) {
+        console.log('Upload button clicked, preventDefault');
+        e.preventDefault();
+        e.stopPropagation();
+        handleUpload();
+    });
+    sendBtn.addEventListener('click', function(e) {
+        console.log('Send button clicked, preventDefault');
+        e.preventDefault();
+        e.stopPropagation();
+        handleQuery();
+    });
+    clearBtn.addEventListener('click', function(e) {
+        console.log('Clear button clicked, preventDefault');
+        e.preventDefault();
+        e.stopPropagation();
+        handleClear();
+    });
+    queryInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            console.log('Enter key pressed on query input, preventDefault');
+            e.preventDefault();
+            e.stopPropagation();
+            handleQuery();
         }
-        
-        const data = await response.json();
-        console.log('Response data:', data);
-        
-        // Remove loading message
-        loadingMsg.remove();
-        
-        if (data.success) {
-            // Add assistant response
-            const content = document.createElement('div');
-            
-            const answer = document.createElement('p');
-            answer.textContent = data.answer;
-            content.appendChild(answer);
-            
-            // Add sources if available
-            if (data.sources && data.sources.length > 0) {
-                const sources = document.createElement('div');
-                sources.className = 'sources';
-                sources.innerHTML = '<strong>📚 Sources:</strong>';
-                
-                data.sources.forEach(source => {
-                    const sourceItem = document.createElement('div');
-                    sourceItem.className = 'source-item';
-                    sourceItem.textContent = '• ' + source;
-                    sources.appendChild(sourceItem);
-                });
-                
-                content.appendChild(sources);
+    });
+    console.log('Event listeners set up complete');
+}
+
+// Update status (document count and model name)
+function updateStatus() {
+    fetch('/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.documents !== undefined) {
+                docCount.textContent = data.documents;
             }
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message assistant';
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-            contentDiv.appendChild(content);
-            
-            messageDiv.appendChild(contentDiv);
-            chatMessages.appendChild(messageDiv);
-        } else {
-            addMessage('❌ Error: ' + data.message, 'assistant');
-        }
-        
-        // Scroll to bottom
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        
-    } catch (error) {
-        console.error('Error details:', error);
-        loadingMsg.remove();
-        addMessage('❌ Error: ' + error.message, 'assistant');
-    }
-});
+            if (data.model) {
+                modelName.textContent = data.model;
+            }
+        })
+        .catch(error => console.error('Error updating status:', error));
+}
 
-// Upload Form Submission
-uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Handle file upload
+function handleUpload() {
+    const file = fileInput.files[0];
     
-    const file = pdfFile.files[0];
-    if (!file) return;
+    if (!file) {
+        showMessage('Please select a PDF file', 'error');
+        return;
+    }
+    
+    if (isUploading) {
+        return;
+    }
+    
+    isUploading = true;
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    
+    // Show progress bar
+    const uploadSection = uploadBtn.parentElement;
+    let progressBar = uploadSection.querySelector('.progress');
+    if (!progressBar) {
+        progressBar = document.createElement('div');
+        progressBar.className = 'progress';
+        progressBar.innerHTML = '<div class="progress-bar"></div>';
+        uploadSection.appendChild(progressBar);
+    }
+    progressBar.style.display = 'block';
     
     const formData = new FormData();
     formData.append('file', file);
     
-    console.log('Starting upload for file:', file.name);
+    const xhr = new XMLHttpRequest();
     
-    // Show uploading status
-    showUploadStatus('📤 Uploading "' + file.name + '"...', 'info');
+    // Track upload progress
+    xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+            const percentComplete = (e.loaded / e.total) * 100;
+            progressBar.querySelector('.progress-bar').style.width = percentComplete + '%';
+        }
+    });
     
-    // Show progress bar
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    progressContainer.style.display = 'block';
-    progressBar.style.width = '0%';
-    progressText.textContent = 'Uploading: 0%';
-    
-    try {
-        // Use XMLHttpRequest for progress tracking
-        const xhr = new XMLHttpRequest();
+    xhr.addEventListener('load', function() {
+        progressBar.style.display = 'none';
+        isUploading = false;
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload PDF';
         
-        // Track upload progress
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-                const percentComplete = (e.loaded / e.total) * 100;
-                progressBar.style.width = percentComplete + '%';
-                progressText.textContent = `Uploading: ${Math.round(percentComplete)}%`;
-                console.log('Upload progress:', Math.round(percentComplete) + '%');
-            }
-        });
-        
-        // Handle completion
-        xhr.addEventListener('load', () => {
-            if (xhr.status === 200) {
-                const data = JSON.parse(xhr.responseText);
-                console.log('Upload response data:', data);
-                
-                if (data.success) {
-                    progressBar.style.width = '100%';
-                    progressText.textContent = 'Uploading: 100%';
-                    
-                    const message = `✓ PDF "${data.filename}" uploaded! Added ${data.chunks} chunks.`;
-                    
-                    // Hide progress after 1 second
-                    setTimeout(() => {
-                        progressContainer.style.display = 'none';
-                        showUploadStatus(message, 'success');
-                    }, 500);
-                    
-                    pdfFile.value = '';
-                    
-                    // Add message to chat
-                    addMessage(`📄 ${message}`, 'assistant');
-                    
-                    console.log('Updating status after upload...');
-                    
-                    // Wait a bit then update status
-                    setTimeout(() => {
-                        console.log('Calling updateStatus() after upload');
-                        updateStatus();
-                    }, 1000);
-                    
-                    // Try updating again after another delay to be sure
-                    setTimeout(() => {
-                        console.log('Calling updateStatus() again after upload (retry)');
-                        updateStatus();
-                    }, 2000);
-                } else {
-                    progressContainer.style.display = 'none';
-                    showUploadStatus('✗ Upload failed: ' + data.message, 'error');
-                    addMessage('❌ Upload error: ' + data.message, 'assistant');
-                }
+        if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            if (response.success) {
+                showMessage('PDF uploaded successfully! Processed ' + response.chunks + ' chunks.', 'success');
+                fileInput.value = '';
+                updateStatus();
             } else {
-                progressContainer.style.display = 'none';
-                showUploadStatus('✗ Upload failed: HTTP ' + xhr.status, 'error');
-                addMessage('❌ Upload error: HTTP ' + xhr.status, 'assistant');
+                showMessage('Error: ' + response.message, 'error');
             }
-        });
-        
-        // Handle errors
-        xhr.addEventListener('error', () => {
-            progressContainer.style.display = 'none';
-            console.error('Upload error');
-            showUploadStatus('✗ Upload failed: Network error', 'error');
-            addMessage('❌ Upload error: Network error', 'assistant');
-        });
-        
-        // Handle abort
-        xhr.addEventListener('abort', () => {
-            progressContainer.style.display = 'none';
-            console.error('Upload aborted');
-            showUploadStatus('✗ Upload cancelled', 'error');
-        });
-        
-        // Send request
-        xhr.open('POST', '/upload');
-        xhr.send(formData);
-        
-    } catch (error) {
-        progressContainer.style.display = 'none';
-        console.error('Upload error:', error);
-        showUploadStatus('✗ Upload failed: ' + error.message, 'error');
-        addMessage('❌ Upload error: ' + error.message, 'assistant');
-    }
-});
+        } else {
+            showMessage('Upload failed with status ' + xhr.status, 'error');
+        }
+    });
+    
+    xhr.addEventListener('error', function() {
+        progressBar.style.display = 'none';
+        isUploading = false;
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload PDF';
+        showMessage('Upload error', 'error');
+    });
+    
+    xhr.open('POST', '/upload');
+    xhr.send(formData);
+}
 
-// Clear Database Button
-clearBtn.addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to clear the database? This cannot be undone.')) {
+// Handle query submission
+function handleQuery() {
+    console.log('handleQuery called');
+    const query = queryInput.value.trim();
+    console.log('Query text:', query);
+    
+    if (!query) {
+        console.log('Query empty, returning');
         return;
     }
     
-    try {
-        const response = await fetch('/clear', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        const data = await response.json();
+    console.log('Adding message to chat...');
+    // Add user message to chat
+    addMessageToChat(query, 'user');
+    queryInput.value = '';
+    sendBtn.disabled = true;
+    console.log('Sending fetch request...');
+    
+    // Send query to backend
+    fetch('/query', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: query })
+    })
+    .then(response => {
+        console.log('Fetch response received, status:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response JSON parsed:', data);
+        sendBtn.disabled = false;
         
         if (data.success) {
-            addMessage('🗑️ Database cleared successfully!', 'assistant');
+            let assistantMessage = data.answer || 'No response';
+            
+            // Add sources if available
+            if (data.sources && data.sources.length > 0) {
+                assistantMessage += '\n\n<div class="sources"><strong>Sources:</strong>';
+                data.sources.forEach(source => {
+                    assistantMessage += '<div class="source-item">• ' + escapeHtml(source) + '</div>';
+                });
+                assistantMessage += '</div>';
+            }
+            
+            console.log('Adding assistant message to chat');
+            addMessageToChat(assistantMessage, 'assistant');
+        } else {
+            console.log('Response not successful:', data.message);
+            addMessageToChat('Error: ' + (data.message || 'Failed to get response'), 'assistant');
+        }
+    })
+    .catch(error => {
+        sendBtn.disabled = false;
+        console.error('Fetch error:', error);
+        addMessageToChat('Error: Connection failed', 'assistant');
+    });
+}
+
+// Add message to chat
+function addMessageToChat(content, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + sender;
+    
+    // Check if content contains HTML (sources)
+    if (content.includes('<div class="sources">')) {
+        messageDiv.innerHTML = '<p>' + content.substring(0, content.indexOf('<div class="sources">')) + '</p>' +
+                               content.substring(content.indexOf('<div class="sources">'));
+    } else {
+        messageDiv.innerHTML = '<p>' + escapeHtml(content) + '</p>';
+    }
+    
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Show status message
+function showMessage(text, type) {
+    const uploadSection = uploadBtn.parentElement;
+    
+    let messageBox = uploadSection.querySelector('.message-box');
+    if (!messageBox) {
+        messageBox = document.createElement('div');
+        messageBox.className = 'message-box';
+        uploadSection.appendChild(messageBox);
+    }
+    
+    messageBox.textContent = text;
+    messageBox.className = 'message-box ' + type;
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        messageBox.style.display = 'none';
+    }, 5000);
+}
+
+// Handle clear database
+function handleClear() {
+    if (!confirm('Are you sure you want to clear the database? This action cannot be undone.')) {
+        return;
+    }
+    
+    fetch('/clear', {
+        method: 'POST',
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Database cleared successfully. Please restart Flask to complete.', 'success');
+            chatBox.innerHTML = '';
             updateStatus();
         } else {
-            addMessage('❌ Error: ' + data.message, 'assistant');
+            showMessage('Error: ' + data.message, 'error');
         }
-        
-    } catch (error) {
-        addMessage('❌ Error clearing database', 'assistant');
+    })
+    .catch(error => {
         console.error('Error:', error);
-    }
-});
-
-// Helper Functions
-function addMessage(text, role) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${role}`;
-    
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    
-    const p = document.createElement('p');
-    p.textContent = text;
-    
-    contentDiv.appendChild(p);
-    messageDiv.appendChild(contentDiv);
-    
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    
-    return messageDiv;
+        showMessage('Error clearing database', 'error');
+    });
 }
 
-function showUploadStatus(message, type) {
-    uploadStatus.textContent = message;
-    uploadStatus.className = 'status-message ' + type;
-    
-    if (type === 'success') {
-        setTimeout(() => {
-            uploadStatus.textContent = '';
-            uploadStatus.className = 'status-message';
-        }, 3000);
-    }
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
-
-async function updateStatus() {
-    try {
-        console.log('Fetching status...');
-        const response = await fetch('/status');
-        console.log('Status response code:', response.status);
-        
-        if (!response.ok) {
-            throw new Error(`Status endpoint failed: HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('Status data:', data);
-        
-        if (data.success || data.documents !== undefined) {
-            // Update even if there's an error, just show what we have
-            document.getElementById('doc-count').innerHTML = 
-                `Documents: <span>${data.documents || 0}</span>`;
-            
-            const modelName = data.model === 'N/A' ? 'Not configured' : data.model;
-            document.getElementById('model-name').textContent = 
-                data.error ? `Model: Error - ${data.error}` : `Model: ${modelName}`;
-            
-            console.log(`✓ Status updated: ${data.documents || 0} docs`);
-        } else {
-            console.error('Status endpoint returned error:', data.message);
-            document.getElementById('model-name').textContent = 
-                `Model: Error - ${data.message}`;
-        }
-    } catch (error) {
-        console.error('Error updating status:', error);
-        document.getElementById('model-name').textContent = 
-            `Model: Error (${error.message})`;
-    }
-}
-
-// Allow pressing Enter to send message
-queryInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        queryForm.dispatchEvent(new Event('submit'));
-    }
-});

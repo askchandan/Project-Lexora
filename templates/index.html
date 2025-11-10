@@ -8,86 +8,43 @@
 </head>
 <body>
     <div class="container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo">
-                <h1>📚 Lexora</h1>
-                <p>RAG + LLM Chatbot</p>
-            </div>
+        <div class="sidebar">
+            <h1>📚 Lexora</h1>
+            <p class="subtitle">RAG + LLM Chatbot</p>
             
-            <div class="status-box">
+            <div class="status">
                 <h3>Status</h3>
-                <p id="doc-count">Documents: <span>0</span></p>
-                <p id="model-name">Model: Loading...</p>
+                <p>Documents: <strong id="docCount">0</strong></p>
+                <p>Model: <strong id="modelName">Loading...</strong></p>
             </div>
             
-            <div class="upload-section">
+            <div class="upload-box">
                 <h3>Upload PDF</h3>
-                <form id="uploadForm" enctype="multipart/form-data">
-                    <input type="file" id="pdfFile" accept=".pdf" required>
-                    <button type="submit" class="btn btn-primary">
-                        📤 Upload
-                    </button>
-                </form>
-                <!-- Progress Bar -->
-                <div id="progressContainer" class="progress-container" style="display: none;">
-                    <div class="progress-bar-bg">
-                        <div id="progressBar" class="progress-bar"></div>
-                    </div>
-                    <p id="progressText" class="progress-text">Uploading: 0%</p>
+                <input type="file" id="fileInput" accept=".pdf">
+                <button id="uploadBtn" class="btn btn-primary">Upload</button>
+                <div id="uploadProgress" class="progress" style="display: none;">
+                    <div id="progressBar" class="progress-bar"></div>
                 </div>
-                <div id="uploadStatus" class="status-message"></div>
+                <div id="uploadMsg" class="message-box"></div>
             </div>
             
-            <div class="actions">
-                <button id="clearBtn" class="btn btn-danger">🗑️ Clear DB</button>
+            <button id="clearBtn" class="btn btn-danger">Clear Database</button>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>Chat</h2>
             </div>
             
-            <div class="info">
-                <p><strong>Tips:</strong></p>
-                <ul>
-                    <li>Upload PDF documents</li>
-                    <li>Ask questions about content</li>
-                    <li>Get instant answers</li>
-                    <li>See sources used</li>
-                </ul>
-            </div>
-        </aside>
-
-        <!-- Main Chat Area -->
-        <main class="chat-area">
-            <div class="header">
-                <h2>Chat Interface</h2>
-                <p>Ask questions about your documents</p>
-            </div>
+            <div id="chatBox" class="chat-box"></div>
             
-            <div id="chatMessages" class="messages">
-                <div class="message assistant">
-                    <div class="message-content">
-                        <p>👋 Welcome to Project Lexora!</p>
-                        <p>Upload PDF documents and ask questions about them.</p>
-                    </div>
-                </div>
+            <div class="chat-input-area">
+                <input type="text" id="queryInput" placeholder="Ask a question...">
+                <button id="sendBtn" class="btn btn-send">Send</button>
             </div>
-            
-            <div class="input-area">
-                <form id="queryForm">
-                    <div class="input-group">
-                        <input 
-                            type="text" 
-                            id="queryInput" 
-                            placeholder="Ask a question..." 
-                            autocomplete="off"
-                        >
-                        <button type="submit" class="btn btn-send">
-                            ➤ Send
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </main>
+        </div>
     </div>
-
+    
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
