@@ -233,6 +233,16 @@ function showMessage(text, type) {
     
     messageBox.textContent = text;
     messageBox.className = 'message-box ' + type;
+    messageBox.style.display = 'block';
+    
+    // Also show in chat if it's a success message
+    if (type === 'success') {
+        const chatMessage = document.createElement('div');
+        chatMessage.className = 'message system-message';
+        chatMessage.innerHTML = '<p style="color: #28a745; font-weight: 600; text-align: center;">✓ ' + text + '</p>';
+        chatBox.appendChild(chatMessage);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
     
     // Auto-hide after 5 seconds
     setTimeout(() => {
@@ -242,26 +252,35 @@ function showMessage(text, type) {
 
 // Handle clear database
 function handleClear() {
+    console.log('handleClear called');
     if (!confirm('Are you sure you want to clear the database? This action cannot be undone.')) {
+        console.log('Clear cancelled');
         return;
     }
     
+    console.log('Sending clear request to /clear');
     fetch('/clear', {
         method: 'POST',
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Clear response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('Clear response data:', data);
         if (data.success) {
-            showMessage('Database cleared successfully. Please restart Flask to complete.', 'success');
+            console.log('Clear successful, updating UI');
+            showMessage('Database cleared successfully!', 'success');
             chatBox.innerHTML = '';
             updateStatus();
         } else {
+            console.log('Clear failed:', data.message);
             showMessage('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        showMessage('Error clearing database', 'error');
+        console.error('Clear error:', error);
+        showMessage('Error clearing database: ' + error.message, 'error');
     });
 }
 

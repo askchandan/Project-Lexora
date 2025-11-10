@@ -73,8 +73,13 @@ class ChromaManager(VectorStore):
         import time
         import gc
         
+        logger.info("START delete_all()")
+        logger.info(f"Persist directory: {self.persist_directory}")
+        logger.info(f"Directory exists before delete: {os.path.exists(self.persist_directory)}")
+        
         try:
             # Force garbage collection
+            logger.info("Closing connections...")
             gc.collect()
             
             # Close the current database connection thoroughly
@@ -85,7 +90,9 @@ class ChromaManager(VectorStore):
             self.db = None
             
             # Wait for file handles to release
-            time.sleep(1)
+            time.sleep(2)
+            gc.collect()
+            logger.info("Connections closed, waiting for file handles...")
         except Exception as e:
             logger.warning(f"Could not close connection: {e}")
         
@@ -93,10 +100,12 @@ class ChromaManager(VectorStore):
         retry_count = 0
         max_retries = 3
         
+        logger.info(f"Attempting to delete {self.persist_directory}...")
         while retry_count < max_retries and os.path.exists(self.persist_directory):
             try:
+                logger.info(f"Delete attempt {retry_count + 1}/{max_retries}...")
                 shutil.rmtree(self.persist_directory)
-                logger.info(f"Deleted Chroma database at {self.persist_directory}")
+                logger.info(f"Successfully deleted {self.persist_directory}")
                 break
             except Exception as e:
                 retry_count += 1
@@ -107,6 +116,7 @@ class ChromaManager(VectorStore):
                     # Last resort: try Windows rmdir command
                     import subprocess
                     try:
+                        logger.info("Trying Windows rmdir command...")
                         subprocess.run(['rmdir', '/s', '/q', self.persist_directory], 
                                      shell=True, check=False, timeout=5)
                         logger.info("Deleted via Windows rmdir command")
@@ -114,13 +124,18 @@ class ChromaManager(VectorStore):
                         logger.error(f"Could not delete directory: {e2}")
                         raise
         
+        logger.info(f"Directory exists after delete attempt: {os.path.exists(self.persist_directory)}")
+        
         # Recreate fresh database
+        logger.info("Recreating fresh database...")
         gc.collect()
         self.db = Chroma(
             persist_directory=self.persist_directory,
             embedding_function=self.embedding_function
         )
-        logger.info("Initialized fresh Chroma database")
+        logger.info(f"Fresh database created. Directory exists: {os.path.exists(self.persist_directory)}")
+        logger.info(f"Document count in fresh DB: {self.get_document_count()}")
+        logger.info("END delete_all()")
     
     def get_document_count(self) -> int:
         """Get the number of documents in the database"""

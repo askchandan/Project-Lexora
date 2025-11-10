@@ -5,10 +5,13 @@ GUI for RAG + LLM Chatbot with PDF Upload
 
 import os
 import shutil
+import gc
+import time
 from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 from src.core.rag_pipeline import RAGPipeline
 from src.core.query_engine import QueryEngine
+from src.database.chroma_manager import ChromaManager
 from src.utils import load_config, get_logger
 
 # Initialize Flask app
@@ -247,43 +250,64 @@ def clear_database():
     try:
         global pipeline, query_engine, chroma_manager
         
-        logger.info("Clear database requested")
+        logger.info("=" * 60)
+        logger.info("CLEAR DATABASE REQUEST STARTED")
+        logger.info("=" * 60)
         
-        # Close all connections
-        pipeline = None
-        query_engine = None
-        chroma_manager = None
-        
-        # Clear uploads folder
         try:
-            for file in os.listdir(app.config['UPLOAD_FOLDER']):
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file)
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-            logger.info("Uploads folder cleared")
+            logger.info("[1/1] Clearing all documents from database...")
+            
+            if not chroma_manager:
+                logger.error("ERROR: chroma_manager not initialized")
+                raise Exception("Database not initialized")
+            
+            # Get all document IDs
+            logger.info("  Getting all document IDs...")
+            items = chroma_manager.db.get(include=[])
+            doc_ids = items.get("ids", [])
+            logger.info(f"  Found {len(doc_ids)} documents to delete")
+            
+            # Delete all documents
+            if doc_ids:
+                logger.info(f"  Deleting {len(doc_ids)} documents...")
+                chroma_manager.db.delete(ids=doc_ids)
+                logger.info("  ✓ Documents deleted")
+                
+                # Persist the changes
+                try:
+                    if hasattr(chroma_manager.db, 'persist'):
+                        chroma_manager.db.persist()
+                        logger.info("  ✓ Changes persisted")
+                except:
+                    pass
+            
+            # Verify empty
+            verify = chroma_manager.db.get(include=[])
+            final_count = len(verify.get("ids", []))
+            logger.info(f"  Final document count: {final_count}")
+            
+            logger.info("=" * 60)
+            logger.info("CLEAR DATABASE COMPLETED SUCCESSFULLY")
+            logger.info("=" * 60)
+            
+            return jsonify({
+                'success': True,
+                'message': 'Database cleared successfully!',
+                'documents': final_count,
+                'model': config.get('model_name', 'mistralai/mistral-7b-instruct')
+            }), 200
+            
         except Exception as e:
-            logger.warning(f"Could not clear uploads folder: {e}")
-        
-        # Clear database folder (ignore errors - files may be locked)
-        try:
-            if os.path.exists(config['chroma_path']):
-                shutil.rmtree(config['chroma_path'], ignore_errors=True)
-                logger.info("Cleared database folder")
-        except Exception as e:
-            logger.warning(f"Could not clear database folder: {e}")
-        
-        # Reinitialize fresh instances
-        logger.info("Reinitializing fresh instances...")
-        initialize_pipeline()
-        logger.info("✓ Database cleared and reinitialized")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Database cleared! Please restart Flask (Ctrl+C then python app.py) for changes to take effect.'
-        }), 200
+            logger.error(f"ERROR: {str(e)}", exc_info=True)
+            logger.error("=" * 60)
+            return jsonify({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }), 500
         
     except Exception as e:
-        logger.error(f"Error clearing database: {str(e)}", exc_info=True)
+        logger.error(f"UNEXPECTED ERROR: {str(e)}", exc_info=True)
+        logger.error("=" * 60)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 

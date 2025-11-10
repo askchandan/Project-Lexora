@@ -1,237 +1,211 @@
-# Project Lexora
+# Project Lexora - RAG + LLM Chatbot
 
 **An Intelligent PDF Analysis and Chat System powered by LLM + RAG**
 
-A production-ready Retrieval-Augmented Generation (RAG) system that enables natural language querying of PDF documents with AI-powered responses.
+A production-ready Retrieval-Augmented Generation (RAG) system with a Flask web interface.
 
 ## Features
 
-✅ **Document Processing**: Automatically loads and indexes PDF documents  
-✅ **Semantic Search**: Finds relevant documents using vector similarity  
-✅ **AI-Powered Responses**: Generates contextual answers using LLM  
-✅ **Multi-Source Tracking**: Shows source documents for each answer  
-✅ **Comprehensive Testing**: 14+ test cases ensuring reliability  
-✅ **Modular Architecture**: Clean, maintainable, extensible codebase  
-✅ **Configuration Management**: Easy environment-based configuration  
+✅ **Web Interface** - Interactive Flask-based chat UI  
+✅ **Document Upload** - Easy PDF upload and processing  
+✅ **Real-time Chat** - Ask questions and get AI responses  
+✅ **Semantic Search** - Vector similarity matching  
+✅ **Source Tracking** - Shows document sources  
+✅ **Database Management** - Clear and manage documents  
+✅ **Docker Ready** - Production deployment  
+✅ **Modular Architecture** - Clean, extensible codebase  
 
-## Quick Start
+## Quick Start (Local)
 
-### 1. Install Dependencies
+### 1. Clone Repository
 ```bash
+git clone https://github.com/askchandan/Project-Lexora.git
+cd Project-Lexora
+```
+
+### 2. Setup Environment
+```bash
+python -m venv venv
+# Windows: venv\Scripts\activate
+# macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
-Create `.env` file with:
+### 3. Configure .env
 ```env
-OPENAI_API_KEY=your_key
+OPENAI_API_KEY=your_api_key
 OPENAI_API_BASE=https://openrouter.ai/api/v1
 DATA_PATH=data
 CHROMA_PATH=chroma_db
+MODEL_NAME=mistralai/mistral-7b-instruct
 ```
 
-### 3. Populate Database
+### 4. Run
 ```bash
-python scripts/populate_database.py --reset
+python app.py
 ```
+Visit `http://localhost:5000`
 
-### 4. Ask Questions
+## Docker Deployment
+
+### Option 1: Docker Run
 ```bash
-python scripts/query.py "What is the punishment for hacking?"
+docker build -t project-lexora .
+docker run -p 5000:5000 \
+  -e OPENAI_API_KEY=your_key \
+  -e OPENAI_API_BASE=https://openrouter.ai/api/v1 \
+  -v lexora_data:/app/chroma_db \
+  project-lexora
 ```
 
-## Architecture
+### Option 2: Docker Compose (Recommended)
+```bash
+# Update .env with your API key
+docker-compose up -d
+docker-compose logs -f
+docker-compose down
+```
 
-### Core Components
+Visit `http://localhost:5000`
 
-1. **Document Pipeline** (`src/core/rag_pipeline.py`)
-   - Load PDFs from data directory
-   - Split into chunks for processing
-   - Generate embeddings
-   - Store in vector database
+## Usage Guide
 
-2. **Query Engine** (`src/core/query_engine.py`)
-   - Process user queries
-   - Retrieve relevant documents
-   - Generate AI responses
+### Upload PDF
+1. Click "Upload PDF" button
+2. Select PDF file
+3. Click "Upload"
+4. Wait for success message
 
-3. **Embedding System** (`src/models/embedding_factory.py`)
-   - OpenAI embeddings for semantic understanding
-   - Vector similarity search
+### Ask Questions
+1. Type question in input box
+2. Click "Send" or press Enter
+3. View AI response with sources
 
-4. **Vector Database** (`src/database/chroma_manager.py`)
-   - Chroma for fast similarity search
-   - Persistent storage of embeddings
+### Clear Database
+1. Click "Clear Database"
+2. Confirm action
+3. Database resets
 
-5. **LLM Integration** (`src/models/llm_factory.py`)
-   - Configurable language models
-   - OpenAI and Mistral support
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Web interface |
+| GET | `/status` | System status |
+| POST | `/upload` | Upload PDF |
+| POST | `/query` | Ask question |
+| POST | `/clear` | Clear database |
 
 ## Project Structure
 
 ```
 project-lexora/
-├── src/                    # Source code
-│   ├── core/              # RAG pipeline & query engine
-│   ├── models/            # Embedding & LLM factories
-│   ├── database/          # Vector store management
-│   └── utils/             # Configuration & logging
-├── scripts/               # Executable scripts
-│   ├── populate_database.py
-│   └── query.py
-├── tests/                 # Test suite (14 test cases)
-├── data/                  # PDF documents (input)
-├── docs/                  # Documentation
-└── config/               # Configuration files
+├── app.py                  # Flask application
+├── requirements.txt        # Dependencies
+├── Dockerfile             # Docker image
+├── docker-compose.yml     # Compose config
+├── .env.example          # Env template
+├── README.md             # This file
+├── LICENSE               # MIT License
+│
+├── src/
+│   ├── core/             # RAG pipeline
+│   ├── models/           # LLM & Embeddings
+│   ├── database/         # Vector store
+│   └── utils/            # Config & logging
+│
+├── templates/
+│   └── index.html        # Web UI
+│
+├── static/
+│   ├── script.js         # Frontend logic
+│   └── style.css         # Styling
+│
+├── data/                 # PDF storage
+└── chroma_db/           # Vector database
 ```
-
-## Usage Examples
-
-### Query for Legal Information
-```bash
-python scripts/query.py "What is Section 66 of IT Act?"
-```
-
-### List Multiple Topics
-```bash
-python scripts/query.py "List all cyber crimes and their penalties"
-```
-
-### Refresh Database
-```bash
-python scripts/populate_database.py --reset
-```
-
-### Run Tests
-```bash
-python tests/test_rag.py
-```
-
-## Test Coverage
-
-14 comprehensive test cases covering:
-- ✅ Hacking punishment retrieval
-- ✅ Computer resource cheating
-- ✅ Private image publishing
-- ✅ Cyberterrorism definitions
-- ✅ Source code tampering
-- ✅ Stolen device handling
-- ✅ Password misuse
-- ✅ Protected system access
-- ✅ Section-specific details
-- ✅ Multi-topic queries
-- ✅ Fine amount extraction
-- ✅ Imprisonment duration
-- ✅ Response validation
-- ✅ Source tracking
 
 ## Configuration
 
 ### Environment Variables
-
 ```env
-# API Configuration
-OPENAI_API_KEY=sk-...              # OpenAI or OpenRouter API key
-OPENAI_API_BASE=https://...        # API base URL
+# Required
+OPENAI_API_KEY=sk_...
+OPENAI_API_BASE=https://openrouter.ai/api/v1
 
-# Data Configuration
-DATA_PATH=data                      # PDF directory path
-CHROMA_PATH=chroma_db              # Vector DB path
-
-# Model Configuration
+# Optional
+DATA_PATH=data
+CHROMA_PATH=chroma_db
 MODEL_NAME=mistralai/mistral-7b-instruct
-TEMPERATURE=0.7                    # Creativity (0-1)
-MAX_TOKENS=500                     # Response length
+TEMPERATURE=0.7
+MAX_TOKENS=500
 ```
+
+### Supported Models
+- `mistralai/mistral-7b-instruct` (default)
+- `gpt-3.5-turbo`
+- `gpt-4`
+- Other OpenRouter models
+
+## System Requirements
+
+**Local**
+- Python 3.8+
+- 2GB RAM
+- 500MB disk
+
+**Docker**
+- Docker 20.10+
+- Docker Compose 1.29+
+- 2GB RAM
+- 500MB disk
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| No documents | Upload PDFs via UI |
+| API error | Check .env with valid key |
+| Port in use | Use different port |
+| Slow response | Check API rate limits |
 
 ## Performance
 
-- **Database Population**: ~100ms per document
-- **Query Processing**: 2-5 seconds (including API calls)
-- **Similarity Search**: <50ms for 1000+ vectors
-- **Supported Docs**: Thousands of documents
-
-## API Reference
-
-### Query Engine
-```python
-from src.core.query_engine import QueryEngine
-
-engine = QueryEngine(chroma_path="chroma_db")
-answer, sources = engine.query("Your question", top_k=5)
-```
-
-### RAG Pipeline
-```python
-from src.core.rag_pipeline import RAGPipeline
-
-pipeline = RAGPipeline(data_path="data", chroma_path="chroma_db")
-documents = pipeline.load_documents()
-chunks = pipeline.split_documents(documents)
-pipeline.add_chunks_to_database(chunks)
-```
-
-## Documentation
-
-- [Project Structure](docs/PROJECT_STRUCTURE.md) - Directory organization
-- [Architecture](docs/ARCHITECTURE.md) - System design
-- [Usage Guide](docs/USAGE_GUIDE.md) - Detailed instructions
-
-## Dependencies
-
-Core dependencies:
-- `langchain` - LLM framework
-- `langchain-openai` - OpenAI integration
-- `langchain-chroma` - Vector database
-- `pypdf` - PDF processing
-- `python-dotenv` - Configuration management
-
-See `requirements.txt` for complete list.
-
-## Error Handling
-
-The system includes:
-- Comprehensive logging
-- Graceful error handling
-- Configuration validation
-- Empty response fallbacks
+- PDF Processing: ~100ms per document
+- Query Response: 2-5 seconds
+- Search Speed: <50ms
 
 ## Security
 
-- API keys stored in `.env` (gitignored)
-- No sensitive data logging
-- Input validation
-- Secure document storage
+✅ API keys in .env (gitignored)  
+✅ Input validation  
+✅ Secure storage  
+✅ CSRF protection ready  
 
-## Future Enhancements
+## Technologies
 
-- [ ] Web UI interface
-- [ ] Support for more document types
-- [ ] Advanced filtering options
-- [ ] Custom fine-tuning
-- [ ] Multi-language support
-- [ ] Real-time document updates
+- **Backend**: Flask, LangChain, Chroma
+- **Frontend**: HTML5, CSS3, JavaScript
+- **DevOps**: Docker, Docker Compose
+- **AI**: Mistral-7B via OpenRouter
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests: `python tests/test_rag.py`
-5. Submit a pull request
+1. Fork repository
+2. Create feature branch
+3. Make changes
+4. Submit pull request
 
 ## License
 
-This project is licensed under the MIT License - see LICENSE file for details.
+MIT License - see LICENSE file
 
-## Support
+## Author
 
-For issues or questions:
-1. Check the [Usage Guide](docs/USAGE_GUIDE.md)
-2. Review test cases in `tests/test_rag.py`
-3. Check system logs for errors
+**Chandan Malakar**  
+GitHub: [@askchandan](https://github.com/askchandan)
 
 ---
 
-**Project Lexora** - Intelligent PDF Analysis & Chat System  
-Built with LangChain, OpenAI, and Chroma
+**Project Lexora** - Intelligent RAG Chatbot  
+Powered by LangChain, Flask, and Chroma
