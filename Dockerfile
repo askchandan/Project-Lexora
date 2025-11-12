@@ -26,11 +26,12 @@ COPY static/ ./static/
 RUN mkdir -p data chroma_db
 
 # Expose port
-EXPOSE 5000
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:5000/status')"
+    CMD python -c "import requests; requests.get('http://localhost:80/status')"
 
+    
 # Run Flask app
 CMD ["python", "app.py"]
