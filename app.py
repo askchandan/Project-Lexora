@@ -14,7 +14,7 @@ from src.core.query_engine import QueryEngine
 from src.database.chroma_manager import ChromaManager
 from src.utils import load_config, get_logger
 
-# Initialize Flask app
+
 app = Flask(__name__)
 app.secret_key = 'project_lexora_secret_key_2024'
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
@@ -31,7 +31,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 logger = get_logger(__name__)
 config = load_config()
 
-# Global pipeline and engine instances
+
 pipeline = None
 query_engine = None
 chroma_manager = None
